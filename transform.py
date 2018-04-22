@@ -40,7 +40,9 @@ def calc_intersect(voxel_xyz, face):
         for axis, boundary in enumerate(voxel_bounday):
 
             # Calculate the intersection between the line of v1_to_v2 and each boundary
-            assert v1_to_v2[axis] != 0.0
+            if v1_to_v2[axis] == 0.0:
+                continue
+
             for boundary_side in boundary:
                 t = (boundary_side - v1[axis]) / v1_to_v2[axis]
                 intersect = v1 + t * v1_to_v2
@@ -67,30 +69,29 @@ def transform_mesh(mesh):
     min_x, min_y, min_z = min_cord
     max_x, max_y, max_z = max_cord
     print("Size of mesh (m):", (max_x, max_y, max_z))
-    print("Transformed size (per voxel):", point2voxelID(max_cord * 10e3))
+    print("Transformed size (per voxel):", point2voxelID(max_cord * 1e3))
 
     # check if the cordinate start from positive
     assert round(min_x) == 0 and round(min_y) == 0 and round(min_z) == 0
 
-    voxel_space_size = point2voxelID(max_cord * 10e3) + (4,)
+    voxel_space_size = point2voxelID(max_cord * 1e3) + (4,)
     print(voxel_space_size)
     voxel_space = np.zeros(voxel_space_size)
 
     faces = mesh.faces
     print("Number of faces:", len(faces))
     
+    sum_size = np.zeros((3,))
     for face_idx, face in enumerate(faces):
         face_vertices = mesh.vertices[face]
-        # print(face_vertices)
+
         mesh_max = np.amax(face_vertices, axis=0)
         mesh_min = np.amin(face_vertices, axis=0)
-        # print(mesh_max)
-        # print(mesh_min)
         
         max_voxel = point2voxelID(mesh_max * 10e3)
         min_voxel = point2voxelID(mesh_min * 10e3)
-        print(max_voxel, min_voxel)
-
+        sum_size += np.array(max_voxel) - np.array(min_voxel)
+        
         for ix in range(min_voxel[0], max_voxel[0] + 1):
             for iy in range(min_voxel[1], max_voxel[1] + 1):
                 for iz in range(min_voxel[2], max_voxel[2] + 1):
@@ -100,14 +101,7 @@ def transform_mesh(mesh):
                         color = np.copy(mesh.visual.face_colors[face_idx])
                         voxel_space[ix, iy, iz] = np.concatenate([[1], color[:3]])
 
+    print("Mean covered voxel size: ", sum_size / len(faces))
 
-        # print(face_vertices)
-        # result = calc_intersect((1,1,1), face_vertices)
-        # print(result)
-        # if face_idx > 1:
-        #     break
+    return voxel_space
     
-    
-if __name__ == '__main__':
-    mesh = trimesh.load('.\scene0000_00\scene0000_00_vh_clean_2.ply')
-    transform_mesh(mesh)
